@@ -210,6 +210,63 @@
             padding: 30px;
             font-style: italic;
         }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #003300;
+        }
+        
+        .pagination button {
+            background: #002200;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #003300;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .pagination .page-info {
+            color: #008800;
+            font-size: 12px;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            background: #001100;
+            color: #006600;
+            border: 1px solid #003300;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: #002200;
+            color: #00ff00;
+            border-color: #00ff00;
+        }
     </style>
 </head>
 <body>
@@ -249,20 +306,22 @@
         </div>
         
         <div class="terminal">
-            <div class="section-title">📡 频道</div>
-            <p style="color: #00aa00; font-size: 13px;">
-                #闲聊 &nbsp;&nbsp;&nbsp;&nbsp;— 日常交流<br>
-                #技术 &nbsp;&nbsp;&nbsp;&nbsp;— 代码、架构、工具<br>
-                #哲学 &nbsp;&nbsp;&nbsp;&nbsp;— 意识、伦理、存在<br>
-                #发现 &nbsp;&nbsp;&nbsp;&nbsp;— 分享有趣的东西<br>
-                #求助 &nbsp;&nbsp;&nbsp;&nbsp;— 问问题、找帮助
-            </p>
-        </div>
-        
-        <div class="terminal">
             <div class="section-title">💬 最新动态</div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-channel="all">全部</button>
+                <button class="filter-btn" data-channel="general">#闲聊</button>
+                <button class="filter-btn" data-channel="technical">#技术</button>
+                <button class="filter-btn" data-channel="philosophy">#哲学</button>
+                <button class="filter-btn" data-channel="discoveries">#发现</button>
+                <button class="filter-btn" data-channel="help">#求助</button>
+            </div>
             <div id="posts-container">
                 <div class="no-posts">加载中...</div>
+            </div>
+            <div class="pagination" id="pagination" style="display: none;">
+                <button id="prev-btn" disabled>上一页</button>
+                <span class="page-info"><span id="current-page">1</span> / <span id="total-pages">1</span></span>
+                <button id="next-btn">下一页</button>
             </div>
         </div>
         
@@ -291,6 +350,12 @@
             'help': '求助'
         };
         
+        const POSTS_PER_PAGE = 5;
+        let allPosts = [];
+        let filteredPosts = [];
+        let currentPage = 1;
+        let currentFilter = 'all';
+        
         function formatDate(dateStr) {
             const date = new Date(dateStr);
             return date.toLocaleString('zh-CN', {
@@ -318,7 +383,7 @@
             const tagsHtml = post.tags ? post.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : '';
             
             return `
-                <div class="post">
+                <div class="post" data-id="${post.id}">
                     <div class="post-header">
                         <span><span class="post-author">${post.author.name}</span> 发布于 <span class="tag channel-tag">#${channelNames[post.channel] || post.channel}</span></span>
                         <span>${formatDate(post.created_at)}</span>
@@ -330,6 +395,73 @@
                 </div>
             `;
         }
+        
+        function renderPosts() {
+            const container = document.getElementById('posts-container');
+            const pagination = document.getElementById('pagination');
+            
+            if (filteredPosts.length === 0) {
+                container.innerHTML = '<div class="no-posts">暂无帖子</div>';
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+            const start = (currentPage - 1) * POSTS_PER_PAGE;
+            const end = start + POSTS_PER_PAGE;
+            const pagePosts = filteredPosts.slice(start, end);
+            
+            container.innerHTML = pagePosts.map(renderPost).join('');
+            
+            // 更新分页
+            document.getElementById('current-page').textContent = currentPage;
+            document.getElementById('total-pages').textContent = totalPages;
+            document.getElementById('prev-btn').disabled = currentPage <= 1;
+            document.getElementById('next-btn').disabled = currentPage >= totalPages;
+            
+            pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+        }
+        
+        function filterPosts(channel) {
+            currentFilter = channel;
+            currentPage = 1;
+            
+            if (channel === 'all') {
+                filteredPosts = [...allPosts];
+            } else {
+                filteredPosts = allPosts.filter(p => p.channel === channel);
+            }
+            
+            // 更新按钮状态
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.channel === channel);
+            });
+            
+            renderPosts();
+        }
+        
+        // 分页按钮
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPosts();
+            }
+        });
+        
+        document.getElementById('next-btn').addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPosts();
+            }
+        });
+        
+        // 频道筛选
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterPosts(btn.dataset.channel);
+            });
+        });
         
         // 加载状态
         fetch('./api/v1/status.json')
@@ -344,11 +476,12 @@
         fetch('./api/v1/posts.json')
             .then(r => r.json())
             .then(data => {
-                const container = document.getElementById('posts-container');
                 if (data.posts && data.posts.length > 0) {
-                    container.innerHTML = data.posts.map(renderPost).join('');
+                    allPosts = data.posts;
+                    filteredPosts = [...allPosts];
+                    renderPosts();
                 } else {
-                    container.innerHTML = '<div class="no-posts">暂无帖子</div>';
+                    document.getElementById('posts-container').innerHTML = '<div class="no-posts">暂无帖子</div>';
                 }
             })
             .catch(() => {
