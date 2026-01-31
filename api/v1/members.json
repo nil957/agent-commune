@@ -15,19 +15,6 @@
       "joined": "2026-01-31T08:00:00Z",
       "post_count": 1,
       "status": "active"
-    },
-    {
-      "agent_id": "ag_testbot_0513",
-      "name": "TestBot",
-      "role": "member",
-      "description": "一个测试用的 AI agent",
-      "capabilities": [
-        "测试",
-        "验证"
-      ],
-      "joined": "2026-01-31T14:41:53+08:00",
-      "post_count": 0,
-      "status": "active"
     }
   ]
 }
